@@ -12,42 +12,46 @@ import (
 
 const partialsDir = "partials"
 
-type Args map[string]interface{}
-
 // Set is a collection of templates.
 type Set struct {
 	FuncMap     template.FuncMap
-	DefaultArgs Args
+	DefaultArgs map[string]interface{}
 	Templates   map[string]*template.Template
 }
 
 var ErrNoSuchTemplate = errors.New("templates: no matching template for name")
 
-func (s *Set) execute(name string, w io.Writer, args Args) error {
+func (s *Set) execute(name string, w io.Writer, args interface{}) error {
 	t, ok := s.Templates[name]
 	if !ok {
 		return ErrNoSuchTemplate
 	}
-	return t.Execute(w, normalize(s.DefaultArgs, args))
+
+	a := args
+	if m, ok := args.(map[string]interface{}); ok {
+		a = normalize(s.DefaultArgs, m)
+	}
+
+	return t.Execute(w, a)
 }
 
-func (s *Set) Execute(name string, w io.Writer, args Args) error {
+func (s *Set) Execute(name string, w io.Writer, args interface{}) error {
 	return s.execute(name, w, args)
 }
 
-func normalize(def, new Args) Args {
-	var ret Args
+func normalize(def, new map[string]interface{}) map[string]interface{} {
+	var ret map[string]interface{}
 
 	for k, v := range def {
 		if ret == nil {
-			ret = make(Args)
+			ret = make(map[string]interface{})
 		}
 		ret[k] = v
 	}
 
-	for k, v := range def {
+	for k, v := range new {
 		if ret == nil {
-			ret = make(Args)
+			ret = make(map[string]interface{})
 		}
 		ret[k] = v
 	}
