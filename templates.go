@@ -19,6 +19,8 @@ type Set struct {
 	Templates   map[string]*template.Template
 }
 
+type Args map[string]interface{}
+
 var ErrNoSuchTemplate = errors.New("templates: no matching template for name")
 
 func (s *Set) execute(name string, w io.Writer, args interface{}) error {
@@ -28,7 +30,7 @@ func (s *Set) execute(name string, w io.Writer, args interface{}) error {
 	}
 
 	a := args
-	if m, ok := args.(map[string]interface{}); ok {
+	if m, ok := args.(Args); ok {
 		a = normalize(s.DefaultArgs, m)
 	}
 
@@ -39,19 +41,19 @@ func (s *Set) Execute(name string, w io.Writer, args interface{}) error {
 	return s.execute(name, w, args)
 }
 
-func normalize(def, new map[string]interface{}) map[string]interface{} {
-	var ret map[string]interface{}
+func normalize(def, new Args) Args {
+	var ret Args
 
 	for k, v := range def {
 		if ret == nil {
-			ret = make(map[string]interface{})
+			ret = make(Args)
 		}
 		ret[k] = v
 	}
 
 	for k, v := range new {
 		if ret == nil {
-			ret = make(map[string]interface{})
+			ret = make(Args)
 		}
 		ret[k] = v
 	}
