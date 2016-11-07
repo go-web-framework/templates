@@ -45,6 +45,11 @@ build:
           go test -race ./...
 
     - script:
+        name: test coverage report
+        code; |
+          goveralls -service drone.io -repotoken $COVERALLS_TOKEN
+
+    - script:
         name: check fmt
         code: |
           # read returns 0 if it receives any input.
