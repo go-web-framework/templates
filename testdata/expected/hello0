@@ -4,7 +4,8 @@
     <title>My page title</title>
 </head>
 <body>
-    {{ template "partials/header.html" . }}
+    <header>This is the header element. The passed value is "42".</header>
+
     <p>hello, world</p>
 </body>
 </html>

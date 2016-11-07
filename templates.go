@@ -2,6 +2,7 @@ package templates
 
 import (
 	"errors"
+	"fmt"
 	"html/template"
 	"io"
 	"io/ioutil"
@@ -10,15 +11,18 @@ import (
 	"strings"
 )
 
-const partialsDir = "partials"
+const defineStart = "{{define %q}}"
+const defineEnd = "{{end}}"
 
 // Set is a collection of templates.
 type Set struct {
 	FuncMap     template.FuncMap
+	PartialsDir string
 	DefaultArgs map[string]interface{}
 	Templates   map[string]*template.Template
 }
 
+// Args is the arguments available to templates upon execution.
 type Args map[string]interface{}
 
 var ErrNoSuchTemplate = errors.New("templates: no matching template for name")
@@ -29,14 +33,21 @@ func (s *Set) execute(name string, w io.Writer, args interface{}) error {
 		return ErrNoSuchTemplate
 	}
 
-	a := args
-	if m, ok := args.(Args); ok {
-		a = normalize(s.DefaultArgs, m)
+	if args == nil {
+		args = s.DefaultArgs
+	} else if m, ok := args.(Args); ok {
+		args = normalize(s.DefaultArgs, m)
 	}
 
-	return t.Execute(w, a)
+	return t.Execute(w, args)
 }
 
+// Execute executes the template for the given name using the given args.
+// If args is of type Args, args is merged with s.DefaultArgs before
+// executing the template.
+//
+// If a template with the specified name does not exist, ErrNoSuchTemplate
+// is returned.
 func (s *Set) Execute(name string, w io.Writer, args interface{}) error {
 	return s.execute(name, w, args)
 }
@@ -61,6 +72,10 @@ func normalize(def, new Args) Args {
 	return ret
 }
 
+// Parse parses the directory specified by path. The partials in
+// s.PartialsDir will be parsed and associated with each of the parsed
+// templates. s.PartialsDir should be a top-level subdirectory of path.
+// If s.PartialsDir is empty, no partials assocation is performed.
 func (s *Set) Parse(path string) error {
 	m, err := readDir(path)
 	if err != nil {
@@ -73,17 +88,18 @@ func (s *Set) Parse(path string) error {
 		m[filepath.ToSlash(k)] = v
 	}
 
-	var partials []string
+	partials := make(map[string]string)
+
 	for k, v := range m {
-		if strings.HasPrefix(k, partialsDir+"/") {
-			partials = append(partials, string(v))
+		if strings.HasPrefix(k, s.PartialsDir+"/") {
+			partials[k] = string(v)
 		}
 	}
 
 	// The partials should be parsed with each main template
 	// to be available in the main template.
 	for k, v := range m {
-		if strings.HasPrefix(k, partialsDir+"/") {
+		if strings.HasPrefix(k, s.PartialsDir+"/") {
 			continue
 		}
 
@@ -91,8 +107,9 @@ func (s *Set) Parse(path string) error {
 		if err != nil {
 			return err
 		}
-		for _, contents := range partials {
-			if _, err := templ.Parse(contents); err != nil {
+
+		for name, contents := range partials {
+			if _, err := templ.Parse(fmt.Sprintf(defineStart, name) + contents + defineEnd); err != nil {
 				return err
 			}
 		}
