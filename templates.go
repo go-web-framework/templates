@@ -1,3 +1,10 @@
+// Package templates improves the template/html package
+// by supporting parsing directories, automatically associate
+// templates with packages, and specifying default arguments
+// during template execution.
+//
+// The Set type provides this functionality. A Set can be safely
+// to executed concurrently.
 package templates
 
 import (
@@ -16,10 +23,35 @@ const defineEnd = "{{end}}"
 
 // Set is a collection of templates.
 type Set struct {
-	FuncMap     template.FuncMap
+	// Funcs is the functions available to all templates.
+	// If nil, no functions will be available.
+	// The field has to be set before Parse is called.
+	Funcs template.FuncMap
+
+	// PartialsDir is the directory in which partials are stored.
+	// In template/html terminology, this the content in between
+	// {{define "foo"}} and {{end}} that will be executed by
+	// using {{template "foo"}} from another template.
 	PartialsDir string
-	DefaultArgs map[string]interface{}
-	Templates   map[string]*template.Template
+
+	// DefaultArgs is the arguments available in all templates.
+	// These values are not used if the args specified in Execute
+	// are non-nil or not of type Args.
+	// If this field is nil, only the args directly specified in Execute
+	// calls are used.
+	DefaultArgs Args
+
+	// Templates is the map of all top-level templates. Partials
+	// are not included in this map. Typically, users will not use
+	// this directly but instead call Execute.
+	Templates map[string]*template.Template
+
+	// LDelim and RDelim are the delimiters to use when parsing templates.
+	// This is the same as the argument to the Delims method in
+	// html/template.
+	// The fields have to be set before Parse is called. If empty, the
+	// defaults "{{" and "}}" are used.
+	LDelim, RDelim string
 }
 
 // Args is the arguments available to templates upon execution.
@@ -72,6 +104,16 @@ func normalize(def, new Args) Args {
 	return ret
 }
 
+func delims(left, right string) (string, string) {
+	if left == "" {
+		left = "{{"
+	}
+	if right == "" {
+		right = "}}"
+	}
+	return left, right
+}
+
 // Parse parses the directory specified by path. The partials in
 // s.PartialsDir will be parsed and associated with each of the parsed
 // templates. s.PartialsDir should be a top-level subdirectory of path.
@@ -96,6 +138,8 @@ func (s *Set) Parse(path string) error {
 		}
 	}
 
+	ldelim, rdelim := delims(s.LDelim, s.RDelim)
+
 	// The partials should be parsed with each main template
 	// to be available in the main template.
 	for k, v := range m {
@@ -103,13 +147,14 @@ func (s *Set) Parse(path string) error {
 			continue
 		}
 
-		templ, err := template.New(k).Funcs(s.FuncMap).Parse(string(v))
+		templ, err := template.New(k).Funcs(s.Funcs).Delims(ldelim, rdelim).Parse(string(v))
 		if err != nil {
 			return err
 		}
 
 		for name, contents := range partials {
-			if _, err := templ.Parse(fmt.Sprintf(defineStart, name) + contents + defineEnd); err != nil {
+			if _, err := templ.Funcs(s.Funcs).Delims(ldelim, rdelim).
+				Parse(fmt.Sprintf(defineStart, name) + contents + defineEnd); err != nil {
 				return err
 			}
 		}
