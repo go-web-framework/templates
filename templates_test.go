@@ -48,12 +48,6 @@ func TestTemplates(t *testing.T) {
 		})
 
 		Convey("Execute", func() {
-			set := Set{
-				PartialsDir: "partials",
-				Funcs: template.FuncMap{
-					"Repeat": strings.Repeat,
-				},
-			}
 			So(set.Parse("testdata/templates"), ShouldBeNil)
 			buf := bytes.Buffer{}
 
