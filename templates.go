@@ -4,7 +4,7 @@
 // during template execution.
 //
 // The Set type provides this functionality. A Set can be safely
-// to executed concurrently.
+// executed concurrently.
 package templates
 
 import (
