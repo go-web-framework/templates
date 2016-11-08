@@ -1,4 +1,4 @@
-// Package templates improves the template/html package
+// Package templates improves the html/template package
 // by supporting parsing directories, automatically associate
 // templates with packages, and specifying default arguments
 // during template execution.
@@ -29,9 +29,9 @@ type Set struct {
 	Funcs template.FuncMap
 
 	// PartialsDir is the directory in which partials are stored.
-	// In template/html terminology, this the content in between
+	// In html/template terminology, this is the content in between
 	// {{define "foo"}} and {{end}} that will be executed by
-	// using {{template "foo"}} from another template.
+	// using {{template "foo" .}} from a parent template.
 	PartialsDir string
 
 	// DefaultArgs is the arguments available in all templates.
