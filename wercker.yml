@@ -45,6 +45,13 @@ build:
           go test -race ./...
 
     - script:
+        name: code coverage report
+        code: |
+         go get github.com/mattn/goveralls
+         go test -covermode=count -coverprofile=profile.cov
+         goveralls -coverprofile=profile.cov -service=travis-ci
+
+    - script:
         name: check fmt
         code: |
           # read returns 0 if it receives any input.
