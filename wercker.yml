@@ -47,6 +47,7 @@ build:
     - script:
         name: test coverage report
         code: |
+          go get -u github.com/mattn/goveralls
           goveralls -service drone.io -repotoken $COVERALLS_TOKEN
 
     - script:
